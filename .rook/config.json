@@ -1,0 +1,9 @@
+{
+  "model": "gemma3:1b",
+  "ollama_url": "http://localhost:11434",
+  "web_search": true,
+  "theme": "dark",
+  "scan_on_startup": false,
+  "error_hook": true,
+  "query_prefix": "??"
+}

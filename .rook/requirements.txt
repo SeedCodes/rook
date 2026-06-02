@@ -1,0 +1,2 @@
+psutil>=5.9.0
+googlesearch-python>=1.2.0

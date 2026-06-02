@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Rook runtime data
+recording.log
+terminal.log
+context.json
+history.log
+inject.pipe
+recording_active
+last_cmd.txt
+last_error_cmd.txt
+last_error_code.txt
+
+# Environment
+.env
+.env.local
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+*.whl
