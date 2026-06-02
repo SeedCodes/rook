@@ -1,35 +1,113 @@
 # ⬛ Rook
 
-> System-aware AI terminal copilot for Linux. Watches your shell, understands your machine, and answers with context.
+> Your terminal, with memory. A context-aware AI copilot that knows your machine, your commands, and your mistakes.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
 [![Linux](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](#prerequisites)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen.svg)](tests/)
 
 ---
 
-## What is Rook?
+## What can it do?
 
-Rook is a shell plugin that turns your terminal into a context-aware AI assistant. It scans your system, watches what you do, and lets you ask questions or chat with a local AI model — all without leaving the terminal.
+Rook turns your terminal into an AI-powered workbench. It **scans your entire system** on install, **watches everything you do**, and gives you an AI assistant that already knows your machine when you ask for help.
 
-```
-$ exho $SHELL
-zsh: command not found: exho
+**It knows:**
+- Your OS, kernel, CPU, RAM, disk
+- Every package installed via apt/pip/npm/cargo
+- All running services
+- Your home directory structure
+- Your dotfiles (`.zshrc`, `.gitconfig`, etc.)
+- Every git repo you have
+- All your Docker images
+- Every command you've run (with exit codes)
+- The full output of your last terminal session
+
+**It can:**
+- Diagnose failed commands in one shot
+- Answer questions about your machine without you explaining it
+- Suggest fixes that match your actual installed tools
+- Continue a conversation with full context of what you tried
+- Run completely offline via Ollama
+
+---
+
+## Demo
+
+### Debug a failed command — Rook already saw it
+
+```bash
+$ docker run hello-world
+docker: error during connect: cannot connect to daemon
 $ rook chat
-# → New terminal window opens with full context
-Rook: You typed "exho" instead of "echo". Try: echo $SHELL
+# → new terminal opens
+you ▸ why did docker fail?
+Rook: The Docker daemon isn't running. On this system (Ubuntu 26.04),
+      start it with: sudo systemctl start docker
+      Then add yourself to the docker group: sudo usermod -aG docker $USER
 ```
+
+### Ask about your system — no setup needed
+
+```bash
+$ rook query "what's the best way to free up disk space on this machine?"
+Rook: You have 380G free out of 500G, so disk isn't critical.
+      Top space consumers I can see:
+        - /var/log (~8G, mostly old journal files)
+        - ~/.cache (3.2G, safe to clear)
+        - Docker images: 12.4G total
+      Try: sudo journalctl --vacuum-time=2w  and  docker system prune -a
+```
+
+### Multi-turn chat with full terminal context
+
+```bash
+$ rook on
+$ cat /etc/nginx/sites-enabled/default
+# ... see nginx config ...
+$ nginx -t
+nginx: [emerg] unknown directive "server_nam" in /etc/nginx/sites-enabled/default:42
+$ rook chat
+you ▸ what does that nginx error mean?
+Rook: You have a typo on line 42 — "server_nam" should be "server_name".
+      I can see your config has: server_nam example.com;
+      Fix: change line 42 to read:  server_name example.com;
+
+you ▸ also check for other typos
+Rook: Looking at your config... line 47 has "listen 80 default_servr;" — 
+      another typo, should be "default_server".
+```
+
+### Inline queries — no need to open a window
+
+```bash
+$ ?? find all python files modified in the last day
+Rook: find . -name "*.py" -mtime -1 -type f
+
+$ ?? how do I enable syntax highlighting in nano
+Rook: Edit ~/.nanorc and add: include /usr/share/nano/*.nanorc
+```
+
+---
 
 ## Features
 
-- **System context** — Scans OS, packages, services, projects, dotfiles on install
-- **Live terminal recording** — When active, captures everything you do for richer AI responses
-- **Error diagnosis** — Failed commands get auto-diagnosed with fixes
-- **Local AI** — Uses Ollama (no API keys, no cloud, fully private)
-- **In-line queries** — Type `?? your question` to ask without opening chat
-- **Multi-turn chat** — `rook chat` opens a new terminal with a full REPL
-- **Zero config** — Works out of the box with `gemma3:1b`
+| Feature | Description |
+|---------|-------------|
+| **System scanner** | On install, captures OS, packages, services, projects, dotfiles, git repos, Docker images, venvs, PATH binaries |
+| **Live terminal recording** | When `rook on` is active, every command + output is captured to `recording.log` via `script` |
+| **Structured command log** | Every command logged with timestamp + exit code for precise error correlation |
+| **Error diagnosis** | When a command fails, run `rook chat` — Rook already knows the error |
+| **Local AI** | Powered by [Ollama](https://ollama.com) — no API keys, no cloud, fully private |
+| **Multi-turn chat** | `rook chat` opens a new terminal with conversation memory |
+| **Inline queries** | `?? your question` in any shell prompt for instant answers |
+| **Web search** | Augments queries with current web results when needed (docs, latest versions) |
+| **Shell hooks** | `preexec`/`precmd` capture everything without affecting your workflow |
+| **Zero config** | Works out of the box with `gemma3:1b`; swap to `llama3.2:3b` for smarter responses |
+
+---
 
 ## Quick Start
 
@@ -60,6 +138,10 @@ ollama pull gemma3:1b
 rook on
 ```
 
+That's it. Rook is now watching your terminal.
+
+---
+
 ## Usage
 
 | Command | Action |
@@ -68,39 +150,59 @@ rook on
 | `rook on` | Turn on + start recording |
 | `rook off` | Turn off |
 | `rook scan` | Re-scan system, rebuild context |
-| `rook query <question>` | Ask a single question |
-| `rook chat` | Open chat in a new terminal |
-| `?? <question>` | In-line query (anywhere in your shell) |
+| `rook query <question>` | Ask a single question (one-shot) |
+| `rook chat` | Open chat in a new terminal (multi-turn) |
+| `?? <question>` | Inline query at any prompt |
 | `rook config` | Edit config in `$EDITOR` |
 | `rook status` | Show current state |
 | `rook update` | Pull latest version |
 
-### Examples
+---
 
-**Ask about your system:**
-```bash
-rook query "what shell am I using"
-rook query "list my git repos"
-rook query "what's taking up the most disk space"
-```
+## Real workflows
 
-**Diagnose errors automatically:**
+### 1. Diagnose anything instantly
+
 ```bash
-$ exho $SHELL
-zsh: command not found: exho
+$ apt install dockr
+E: Unable to locate package dockr
 $ rook chat
-# → Rook knows you meant "echo" and explains
+you ▸ I tried to install dockr
+Rook: Typo — the package is "docker.io" on Debian/Ubuntu.
+      Try: sudo apt install docker.io
 ```
 
-**Chat in-line with context:**
+### 2. Explore your own machine
+
 ```bash
-$ rook on
-$ docker ps
-$ rook chat
-# → New window opens, Rook sees your docker attempt
-you ▸ why didn't docker ps work?
-Rook: The docker daemon might not be running...
+$ rook query "what services are running on this system?"
+$ rook query "show me my python virtual environments"
+$ rook query "which docker images do I have and how big are they?"
+$ rook query "what's the disk usage of my home directory?"
 ```
+
+### 3. Learn while you work
+
+```bash
+$ curl -fsSL https://get.docker.com | sh
+# ... 200 lines of output ...
+$ rook query "explain what that docker install script just did"
+```
+
+### 4. Recover from mistakes
+
+```bash
+$ rm -rf ~/projects/important-thing
+# oh no
+$ rook chat
+you ▸ I just deleted a project folder, can I recover it?
+Rook: If the filesystem is ext4 and you act fast, you might be able to
+      recover files using extundelete. Stop writing to the disk now.
+      Install with: sudo apt install extundelete
+      Then: sudo extundelete /dev/sdaX --restore-directory ~/projects
+```
+
+---
 
 ## Configuration
 
@@ -122,56 +224,90 @@ Edit `~/.rook/config.json`:
 |-------|---------|-------------|
 | `model` | `gemma3:1b` | Ollama model to use |
 | `ollama_url` | `http://localhost:11434` | Ollama API endpoint |
-| `web_search` | `true` | Augment queries with web search |
-| `query_prefix` | `??` | In-line query prefix |
-| `error_hook` | `true` | Auto-diagnose failed commands |
+| `web_search` | `true` | Augment queries with web search for current info |
+| `query_prefix` | `??` | Inline query prefix |
+| `error_hook` | `true` | Auto-capture failed commands |
+| `scan_on_startup` | `false` | Re-scan on every shell start (slow) |
+
+**Recommended models:**
+- `gemma3:1b` — tiny (815MB), works everywhere, basic reasoning
+- `llama3.2:3b` — better reasoning, 2GB
+- `deepseek-coder:1.3b` — best for code questions, 776MB
+- `llama3.2:1b` — alternative to gemma3, similar size
+
+---
 
 ## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Your terminal                                          │
-│  ┌──────────────────────────────────┐                  │
-│  │ You type commands                │                  │
-│  │  • preexec → logs command        │                  │
-│  │  • script → records output       │                  │
-│  │  • precmd → logs exit code       │                  │
-│  └──────────────────────────────────┘                  │
-└────────────────────┬────────────────────────────────────┘
-                     │ rook chat
-                     ▼
-        ┌──────────────────────────┐
-        │ New gnome-terminal       │
-        │ with chat REPL           │
-        │  • Reads recording.log   │
-        │  • Reads terminal.log    │
-        │  • Reads context.json    │
-        │  • Sends to Ollama       │
-        └──────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Your terminal                                                │
+│  ┌────────────────────────────────────┐                      │
+│  │ You type commands                  │                      │
+│  │   preexec → logs command string    │                      │
+│  │   script   → records full output   │                      │
+│  │   precmd  → logs exit code         │                      │
+│  └────────────────┬───────────────────┘                      │
+└───────────────────┼──────────────────────────────────────────┘
+                    │  rook chat / rook query / ??
+                    ▼
+        ┌─────────────────────────────────┐
+        │ rook.py                         │
+        │   • Reads context.json          │
+        │   • Reads terminal.log          │
+        │   • Reads recording.log         │
+        │   • Builds system prompt        │
+        │   • Sends to Ollama (local)     │
+        └────────────────┬────────────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │ Ollama          │
+                │ (local AI)      │
+                │ 127.0.0.1:11434 │
+                └─────────────────┘
 ```
 
-1. **System scan** — On install, Rook builds `~/.rook/context.json` (OS, packages, projects, etc.)
-2. **Shell hooks** — `preexec` and `precmd` log every command with timestamps and exit codes
-3. **Terminal recording** — `script` utility captures the full terminal output to `recording.log`
-4. **AI query** — When you run `rook query` or `rook chat`, the context is injected into the prompt
-5. **Local inference** — Ollama runs the model locally, keeping everything private
+1. **System scan** — On install, Rook dumps your machine state to `~/.rook/context.json` (OS, packages, projects, dotfiles, etc.)
+2. **Shell hooks** — `preexec` saves the command, `script` records output, `precmd` saves exit code — all in real time
+3. **AI query** — When you ask, Rook assembles a system prompt with: system context + recent commands + terminal output
+4. **Local inference** — Ollama runs the model locally. Nothing leaves your machine.
+
+---
 
 ## Troubleshooting
 
 **"ollama: command not found"**
-Install Ollama: `curl -fsSL https://ollama.com/install.sh | sh`
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull gemma3:1b
+```
 
 **"gnome-terminal: command not found"**
-Install it: `sudo apt install gnome-terminal` (Ubuntu) or your distro's equivalent.
+```bash
+sudo apt install gnome-terminal    # Ubuntu/Debian
+sudo dnf install gnome-terminal    # Fedora
+```
 
 **Model gives poor responses**
-Try a bigger model: `ollama pull llama3.2:3b` and update `config.json`.
+Try a bigger model:
+```bash
+ollama pull llama3.2:3b
+# then edit ~/.rook/config.json: "model": "llama3.2:3b"
+```
 
 **Chat window doesn't open**
-Make sure `gnome-terminal` is installed and your `$DISPLAY` (X11) or Wayland session is running.
+Check that you're on X11 or Wayland with XWayland, and that `gnome-terminal` opens manually.
 
 **"Rook recording stopped" appears unexpectedly**
-The `script` session ended (you typed `exit` or the shell process exited). Run `rook on` again to restart.
+The `script` session ended (you typed `exit` or the shell process exited). Run `rook on` again.
+
+**Want to clear old recordings?**
+```bash
+rm ~/.rook/recording.log ~/.rook/terminal.log
+```
+
+---
 
 ## Uninstall
 
@@ -180,6 +316,8 @@ bash uninstall.sh
 ```
 
 Removes `~/.rook/`, source lines from `.zshrc`/`.bashrc`, and stops all Rook processes.
+
+---
 
 ## Contributing
 
