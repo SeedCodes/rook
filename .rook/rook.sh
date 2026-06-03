@@ -175,7 +175,9 @@ rook() {
                 local payload="{\"command\": \"$err_cmd\", \"exit_code\": $err_code, \"stderr\": \"exit code $err_code\"}"
                 echo "$payload" | python3 "$ROOK_DIR/rook.py" error
             else
-                gnome-terminal --title "Rook Chat" -- python3 "$ROOK_DIR/rook.py" chat "$@"
+                # Launch a clean shell (zsh -f skips .zshrc, --no-globalrcs skips /etc/zshenv)
+                # so the user's startup banner doesn't leak into the chat REPL.
+                gnome-terminal --title "Rook Chat" -- zsh --no-rcs -c "exec python3 '$ROOK_DIR/rook.py' chat $*"
             fi
             ;;
         config)

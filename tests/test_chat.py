@@ -174,7 +174,7 @@ class TestPrintBanner(unittest.TestCase):
             print_banner()
             output = fake_out.getvalue()
 
-        self.assertIn("R O O K", output)
+        self.assertIn("R  O  O  K", output)
         self.assertIn("System-aware AI copilot", output)
 
     def test_banner_contains_escape_codes(self):

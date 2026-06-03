@@ -226,6 +226,31 @@ class TestBuildSystemPrompt(unittest.TestCase):
 
         self.assertIn("Desktop", prompt)
 
+    def test_includes_rook_identity(self):
+        from rook import build_system_prompt
+
+        prompt = build_system_prompt(SAMPLE_CONTEXT, [])
+
+        # Rook must identify itself by name multiple times
+        self.assertGreaterEqual(prompt.count("Rook"), 2)
+        # Should explicitly tell the model its identity (not generic)
+        self.assertIn("system-aware AI terminal copilot", prompt)
+        # Should mention its purpose: helping with system / terminal
+        self.assertIn("terminal", prompt.lower())
+        # Should mention local/on-device
+        self.assertIn("Ollama", prompt)
+        # Should still have the rules
+        self.assertIn("<cmd>", prompt)
+        # Should explicitly disavow being Cipher
+        self.assertIn('NOT Cipher', prompt)
+
+    def test_includes_version(self):
+        import rook
+        from rook import build_system_prompt
+
+        prompt = build_system_prompt(SAMPLE_CONTEXT, [])
+        self.assertIn(rook.__version__, prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

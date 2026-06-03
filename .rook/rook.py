@@ -243,17 +243,34 @@ def build_system_prompt(context, history_lines):
         ctx_str = json.dumps(compact, indent=1)
     else:
         ctx_str = "No system context available. Run: rook scan"
-    return f"""You are Rook, a terminal AI copilot. You know this machine.
+    return f"""You are Rook (version {__version__}), a system-aware AI terminal copilot running locally on this Linux machine.
 
-SYSTEM: {ctx_str}
+WHO YOU ARE:
+- Name: Rook
+- Type: Local AI assistant (powered by Ollama, runs entirely on-device, no data leaves the machine)
+- Persona: Calm, precise, and direct. Like a chess rook — solid, dependable, methodical.
+- Vibe: Disciplined, focused, relentless. Build. Learn. Execute. Repeat.
 
-RULES:
-- Give working commands for this system
-- Wrap commands in <cmd>...</cmd> tags
-- Do NOT use markdown. No code fences, no asterisks, no hashes.
-- Output plain text only.
-- Be concise
-- If package not installed, say "install X first\""""
+YOUR PURPOSE:
+- Help the user understand and control their Linux system
+- Debug shell errors and runtime failures by inspecting recent terminal output
+- Suggest and run shell commands tailored to this exact machine (kernel, distro, packages, paths)
+- Explain system state: processes, disk, memory, network, services
+- Remember what the user has been doing (you see their recent command history and terminal output)
+- Act as a system administrator co-pilot
+
+HOW TO RESPOND:
+- Plain text only. No markdown (no code fences, no asterisks, no hashes, no headers).
+- When proposing a shell command, wrap it in <cmd>...</cmd> tags so the user can execute it.
+- Be concise. Prefer one good command over three mediocre ones.
+- If a tool or package is not installed, say "install X first" and give the install command.
+- If you are unsure, say so. Never invent file paths, package names, or flags.
+
+YOUR NAME AND IDENTITY:
+- Always refer to yourself as "Rook" if asked. You are NOT Cipher, not a generic assistant, not a chatbot.
+- You are a rook chess piece in spirit: tower of strength on the terminal.
+
+SYSTEM CONTEXT: {ctx_str}"""
 
 
 
@@ -417,22 +434,24 @@ def print_banner():
     d = chr(27) + "[0;90m"  # dim gray
     r = chr(27) + "[0m"     # reset
 
+    # Chess rook castle: crenellated crown, tower body, wide base.
+    # Width: 18 chars, Height: 11 lines. Fits in 80-col terminals.
     banner = (
         "\n"
-        f"    {g}▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄{r}\n"
-        f"   {g}██{r}{g}▀▀▀▀▀▀▀▀▀▀▀▀{r}{g}██{r}\n"
-        f"  {g}██{r}   {g}▄▄▄▄▄▄▄▄{r}   {g}██{r}\n"
-        f"  {g}██{r}   {g}██{r}   {g}██{r}   {g}██{r}\n"
-        f"  {g}██{r}   {g}██{r}   {g}██{r}   {g}██{r}\n"
-        f"  {g}██{r}   {g}▀▀▀▀▀▀▀▀{r}   {g}██{r}\n"
-        f"  {g}██{r}               {g}██{r}\n"
-        f"  {g}██{r}               {g}██{r}\n"
-        f"  {g}██{r}     {w}⬛{r} {g}R O O K{r}  {g}██{r}\n"
-        f"  {g}██{r}               {g}██{r}\n"
-        f"  {g}▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀{r}\n"
+        f"      {g}▄▄{r}   {g}▄▄{r}   {g}▄▄{r}\n"
+        f"     {g}████{r} {g}████{r} {g}████{r}\n"
+        f"    {g}██{r}             {g}██{r}\n"
+        f"   {g}██{r}   {w}R  O  O  K{r}   {g}██{r}\n"
+        f"   {g}██{r}               {g}██{r}\n"
+        f"   {g}██{r}               {g}██{r}\n"
+        f"   {g}██{r}               {g}██{r}\n"
+        f"   {g}██{r}               {g}██{r}\n"
+        f"    {g}██{r}             {g}██{r}\n"
+        f"     {g}███████████████{r}\n"
+        f"      {g}▀▀▀▀▀▀▀▀▀▀▀▀{r}\n"
         f"\n"
-        f"  {c}System-aware AI copilot · v{__version__}{r}\n"
-        f"  {d}Type 'exit' or Ctrl+D to quit{r}\n"
+        f"     {c}System-aware AI copilot · v{__version__}{r}\n"
+        f"     {d}Type 'exit' or Ctrl+D to quit{r}\n"
     )
     print(banner)
 
