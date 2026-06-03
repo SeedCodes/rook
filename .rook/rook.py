@@ -399,8 +399,35 @@ def load_recording(max_lines=100):
     text = re.sub(r"Script done[^\n]*\n?", "", text)
     # Normalize line endings
     text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Filter out known startup banner lines that would pollute the AI's context
+    noise_patterns = [
+        r"^=+\s*$",                              # ============ dividers
+        r"^\s*I am Cipher\s*$",                  # Cipher banner
+        r"^\s*Disciplined\s*\|.*$",              # Cipher tagline
+        r"^\s*Build\.\s*Learn\..*$",             # Cipher tagline
+        r"^\s*Focused\s*\|.*$",                  # Cipher tagline
+        r"^\s*Relentless\s*\|.*$",               # Cipher tagline
+    ]
+    for pat in noise_patterns:
+        text = re.sub(pat, "", text, flags=re.MULTILINE)
     lines = [l.rstrip() for l in text.splitlines() if l.strip()]
     return "\n".join(lines[-max_lines:])
+
+
+def _rotate_recordings():
+    """Truncate the recording files so a new chat starts with a clean slate.
+
+    The parent's recording may contain startup banners, .zshrc content,
+    or other noise from the previous shell session. We don't want that
+    polluting the AI's understanding of what the user is doing.
+    """
+    for fname in ("recording.log", "terminal.log"):
+        p = ROOK_DIR / fname
+        if p.exists():
+            try:
+                p.write_text("")
+            except Exception:
+                pass
 
 
 def load_cmd_log(max_lines=30):
@@ -434,24 +461,27 @@ def print_banner():
     d = chr(27) + "[0;90m"  # dim gray
     r = chr(27) + "[0m"     # reset
 
-    # Chess rook castle: crenellated crown, tower body, wide base.
-    # Width: 18 chars, Height: 11 lines. Fits in 80-col terminals.
+    # Chess rook castle (tall, symmetrical, 20 cols wide):
+    #   4 crenellations on top, solid crown, tower body, wide base.
+    # R O O K text sits clearly in the middle of the body.
     banner = (
         "\n"
-        f"      {g}▄▄{r}   {g}▄▄{r}   {g}▄▄{r}\n"
-        f"     {g}████{r} {g}████{r} {g}████{r}\n"
-        f"    {g}██{r}             {g}██{r}\n"
-        f"   {g}██{r}   {w}R  O  O  K{r}   {g}██{r}\n"
-        f"   {g}██{r}               {g}██{r}\n"
-        f"   {g}██{r}               {g}██{r}\n"
-        f"   {g}██{r}               {g}██{r}\n"
-        f"   {g}██{r}               {g}██{r}\n"
-        f"    {g}██{r}             {g}██{r}\n"
-        f"     {g}███████████████{r}\n"
-        f"      {g}▀▀▀▀▀▀▀▀▀▀▀▀{r}\n"
+        f"   {g}▄▄▄{r}    {g}▄▄▄{r}    {g}▄▄▄{r}    {g}▄▄▄{r}\n"
+        f"  {g}█████{r}  {g}█████{r}  {g}█████{r}  {g}█████{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}        {w}R    O    O    K{r}       {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f" {g}██{r}                                 {g}██{r}\n"
+        f"  {g}█████████████████████████████{r}\n"
+        f"   {g}▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀{r}\n"
         f"\n"
-        f"     {c}System-aware AI copilot · v{__version__}{r}\n"
-        f"     {d}Type 'exit' or Ctrl+D to quit{r}\n"
+        f"    {c}System-aware AI copilot · v{__version__}{r}\n"
+        f"    {d}Type 'exit' or Ctrl+D to quit{r}\n"
     )
     print(banner)
 
@@ -461,6 +491,12 @@ def cmd_chat(args):
     context = load_context()
     sys_prompt = build_system_prompt(context, [])
     messages = [{"role": "system", "content": sys_prompt}]
+
+    # Rotate the terminal recordings so the chat REPL doesn't see the
+    # user's previous shell session (which may include startup banners,
+    # .zshrc content, or other noise). The new chat shell is clean; we
+    # only want context from the rook session itself.
+    _rotate_recordings()
 
     # Build terminal context
     terminal_ctx = ""

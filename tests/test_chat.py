@@ -174,7 +174,7 @@ class TestPrintBanner(unittest.TestCase):
             print_banner()
             output = fake_out.getvalue()
 
-        self.assertIn("R  O  O  K", output)
+        self.assertIn("R    O    O    K", output)
         self.assertIn("System-aware AI copilot", output)
 
     def test_banner_contains_escape_codes(self):
@@ -215,6 +215,60 @@ class TestPrintBanner(unittest.TestCase):
         self.assertIn("▄", output)  # lower half block
         self.assertIn("▀", output)  # upper half block
         self.assertIn("█", output)  # full block
+
+
+class TestRotateRecordings(unittest.TestCase):
+    """Test that _rotate_recordings() clears the recording files."""
+
+    def test_rotate_clears_recording_log(self):
+        from rook import _rotate_recordings
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / "recording.log").write_text("old noise from parent shell\n")
+            (tmp / "terminal.log").write_text("1780408972|0|cls\n")
+
+            with mock.patch("rook.ROOK_DIR", tmp):
+                _rotate_recordings()
+
+            self.assertEqual((tmp / "recording.log").read_text(), "")
+            self.assertEqual((tmp / "terminal.log").read_text(), "")
+
+    def test_rotate_handles_missing_files(self):
+        from rook import _rotate_recordings
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            # No files exist
+            with mock.patch("rook.ROOK_DIR", tmp):
+                # Should not raise
+                _rotate_recordings()
+
+
+class TestLoadRecordingFiltersNoise(unittest.TestCase):
+    """Test that load_recording() filters out known banner noise."""
+
+    def test_filters_cipher_banner(self):
+        from rook import load_recording
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / "recording.log").write_text(
+                "========================================\n"
+                "I am Cipher\n"
+                "Disciplined | Focused | Relentless\n"
+                "Build. Learn. Execute. Repeat.\n"
+                "========================================\n"
+                "actual user output\n"
+            )
+
+            with mock.patch("rook.ROOK_DIR", tmp):
+                result = load_recording(max_lines=50)
+
+        self.assertNotIn("Cipher", result)
+        self.assertNotIn("Disciplined", result)
+        self.assertNotIn("Build. Learn", result)
+        self.assertIn("actual user output", result)
 
 
 if __name__ == "__main__":
