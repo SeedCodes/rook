@@ -162,5 +162,60 @@ class TestVersion(unittest.TestCase):
         self.assertRegex(rook.__version__, r"^\d+\.\d+\.\d+$")
 
 
+class TestPrintBanner(unittest.TestCase):
+    """Test print_banner() output."""
+
+    def test_banner_contains_rook_text(self):
+        from io import StringIO
+
+        from rook import print_banner
+
+        with mock.patch("sys.stdout", new=StringIO()) as fake_out:
+            print_banner()
+            output = fake_out.getvalue()
+
+        self.assertIn("R O O K", output)
+        self.assertIn("System-aware AI copilot", output)
+
+    def test_banner_contains_escape_codes(self):
+        from io import StringIO
+
+        from rook import print_banner
+
+        with mock.patch("sys.stdout", new=StringIO()) as fake_out:
+            print_banner()
+            output = fake_out.getvalue()
+
+        # Should have ANSI color codes
+        self.assertIn(chr(27) + "[1;32m", output)  # green
+        self.assertIn(chr(27) + "[0m", output)      # reset
+
+    def test_banner_contains_version(self):
+        from io import StringIO
+
+        import rook
+        from rook import print_banner
+
+        with mock.patch("sys.stdout", new=StringIO()) as fake_out:
+            print_banner()
+            output = fake_out.getvalue()
+
+        self.assertIn(rook.__version__, output)
+
+    def test_banner_contains_ascii_art_chars(self):
+        from io import StringIO
+
+        from rook import print_banner
+
+        with mock.patch("sys.stdout", new=StringIO()) as fake_out:
+            print_banner()
+            output = fake_out.getvalue()
+
+        # Box drawing chars
+        self.assertIn("▄", output)  # lower half block
+        self.assertIn("▀", output)  # upper half block
+        self.assertIn("█", output)  # full block
+
+
 if __name__ == "__main__":
     unittest.main()

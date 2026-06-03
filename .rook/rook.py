@@ -409,6 +409,34 @@ def load_cmd_log(max_lines=30):
     return "\n".join(parsed)
 
 
+def print_banner():
+    """Print the Rook startup banner."""
+    g = chr(27) + "[1;32m"  # bold green
+    w = chr(27) + "[1;37m"  # bold white
+    c = chr(27) + "[1;36m"  # bold cyan
+    d = chr(27) + "[0;90m"  # dim gray
+    r = chr(27) + "[0m"     # reset
+
+    banner = (
+        "\n"
+        f"    {g}▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄{r}\n"
+        f"   {g}██{r}{g}▀▀▀▀▀▀▀▀▀▀▀▀{r}{g}██{r}\n"
+        f"  {g}██{r}   {g}▄▄▄▄▄▄▄▄{r}   {g}██{r}\n"
+        f"  {g}██{r}   {g}██{r}   {g}██{r}   {g}██{r}\n"
+        f"  {g}██{r}   {g}██{r}   {g}██{r}   {g}██{r}\n"
+        f"  {g}██{r}   {g}▀▀▀▀▀▀▀▀{r}   {g}██{r}\n"
+        f"  {g}██{r}               {g}██{r}\n"
+        f"  {g}██{r}               {g}██{r}\n"
+        f"  {g}██{r}     {w}⬛{r} {g}R O O K{r}  {g}██{r}\n"
+        f"  {g}██{r}               {g}██{r}\n"
+        f"  {g}▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀{r}\n"
+        f"\n"
+        f"  {c}System-aware AI copilot · v{__version__}{r}\n"
+        f"  {d}Type 'exit' or Ctrl+D to quit{r}\n"
+    )
+    print(banner)
+
+
 def cmd_chat(args):
     cfg = load_config()
     context = load_context()
@@ -431,6 +459,15 @@ def cmd_chat(args):
             "role": "system",
             "content": f"Terminal context from the user's current session:\n{terminal_ctx}",
         })
+
+    # Show startup banner
+    print_banner()
+    if terminal_ctx:
+        print("\033[0;90m────────────────────────────────────\033[0m")
+        print(f"\033[0;90mLoaded {len(cmd_log.splitlines())} recent commands\033[0m")
+        print(f"\033[0;90mLoaded {len(recording.splitlines())} lines of terminal output\033[0m")
+        print("\033[0;90m────────────────────────────────────\033[0m")
+    print()
 
     initial = " ".join(args.chat) if hasattr(args, "chat") and args.chat else ""
     if initial:
