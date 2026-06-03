@@ -174,7 +174,7 @@ class TestPrintBanner(unittest.TestCase):
             print_banner()
             output = fake_out.getvalue()
 
-        self.assertIn("R    O    O    K", output)
+        self.assertIn("Rook", output)
         self.assertIn("System-aware AI copilot", output)
 
     def test_banner_contains_escape_codes(self):
@@ -202,7 +202,7 @@ class TestPrintBanner(unittest.TestCase):
 
         self.assertIn(rook.__version__, output)
 
-    def test_banner_contains_ascii_art_chars(self):
+    def test_banner_no_unicode_art(self):
         from io import StringIO
 
         from rook import print_banner
@@ -211,10 +211,10 @@ class TestPrintBanner(unittest.TestCase):
             print_banner()
             output = fake_out.getvalue()
 
-        # Box drawing chars
-        self.assertIn("▄", output)  # lower half block
-        self.assertIn("▀", output)  # upper half block
-        self.assertIn("█", output)  # full block
+        # Should NOT contain any Unicode block drawing characters
+        self.assertNotIn("▄", output)
+        self.assertNotIn("▀", output)
+        self.assertNotIn("█", output)
 
 
 class TestRotateRecordings(unittest.TestCase):

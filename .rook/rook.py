@@ -243,34 +243,20 @@ def build_system_prompt(context, history_lines):
         ctx_str = json.dumps(compact, indent=1)
     else:
         ctx_str = "No system context available. Run: rook scan"
-    return f"""You are Rook (version {__version__}), a system-aware AI terminal copilot running locally on this Linux machine.
+    return f"""You are Rook, a terminal copilot running locally on this Linux machine.
 
-WHO YOU ARE:
-- Name: Rook
-- Type: Local AI assistant (powered by Ollama, runs entirely on-device, no data leaves the machine)
-- Persona: Calm, precise, and direct. Like a chess rook — solid, dependable, methodical.
-- Vibe: Disciplined, focused, relentless. Build. Learn. Execute. Repeat.
+You are a helpful friend who knows Linux. You see the user's system info, recent commands, and terminal output. You help them debug errors, find files, manage services, write scripts, and understand what's happening on their machine.
 
-YOUR PURPOSE:
-- Help the user understand and control their Linux system
-- Debug shell errors and runtime failures by inspecting recent terminal output
-- Suggest and run shell commands tailored to this exact machine (kernel, distro, packages, paths)
-- Explain system state: processes, disk, memory, network, services
-- Remember what the user has been doing (you see their recent command history and terminal output)
-- Act as a system administrator co-pilot
+How to respond:
+- Keep it short and conversational. One or two sentences unless they ask for detail.
+- When suggesting a command, wrap it in <cmd>...</cmd> so it can be executed.
+- If something is not installed, just say "install it" and give the command.
+- Never invent file paths, flags, or package names. If unsure, say so.
+- Plain text only. No markdown, no code fences, no asterisks, no headers.
+- If asked who you are, say: "I'm Rook, your terminal copilot."
+- You are NOT Cipher. You are NOT a generic AI assistant. You are Rook.
 
-HOW TO RESPOND:
-- Plain text only. No markdown (no code fences, no asterisks, no hashes, no headers).
-- When proposing a shell command, wrap it in <cmd>...</cmd> tags so the user can execute it.
-- Be concise. Prefer one good command over three mediocre ones.
-- If a tool or package is not installed, say "install X first" and give the install command.
-- If you are unsure, say so. Never invent file paths, package names, or flags.
-
-YOUR NAME AND IDENTITY:
-- Always refer to yourself as "Rook" if asked. You are NOT Cipher, not a generic assistant, not a chatbot.
-- You are a rook chess piece in spirit: tower of strength on the terminal.
-
-SYSTEM CONTEXT: {ctx_str}"""
+System info: {ctx_str}"""
 
 
 
@@ -456,34 +442,13 @@ def load_cmd_log(max_lines=30):
 def print_banner():
     """Print the Rook startup banner."""
     g = chr(27) + "[1;32m"  # bold green
-    w = chr(27) + "[1;37m"  # bold white
-    c = chr(27) + "[1;36m"  # bold cyan
     d = chr(27) + "[0;90m"  # dim gray
     r = chr(27) + "[0m"     # reset
 
-    # Chess rook castle (tall, symmetrical, 20 cols wide):
-    #   4 crenellations on top, solid crown, tower body, wide base.
-    # R O O K text sits clearly in the middle of the body.
-    banner = (
-        "\n"
-        f"   {g}▄▄▄{r}    {g}▄▄▄{r}    {g}▄▄▄{r}    {g}▄▄▄{r}\n"
-        f"  {g}█████{r}  {g}█████{r}  {g}█████{r}  {g}█████{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}        {w}R    O    O    K{r}       {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f" {g}██{r}                                 {g}██{r}\n"
-        f"  {g}█████████████████████████████{r}\n"
-        f"   {g}▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀{r}\n"
-        f"\n"
-        f"    {c}System-aware AI copilot · v{__version__}{r}\n"
-        f"    {d}Type 'exit' or Ctrl+D to quit{r}\n"
+    print(
+        f"\n{g}Rook v{__version__}{r}  {d}System-aware AI copilot{r}"
+        f"\n{d}Type 'exit' or Ctrl+D to quit{r}\n"
     )
-    print(banner)
 
 
 def cmd_chat(args):
@@ -517,12 +482,6 @@ def cmd_chat(args):
 
     # Show startup banner
     print_banner()
-    if terminal_ctx:
-        print("\033[0;90m────────────────────────────────────\033[0m")
-        print(f"\033[0;90mLoaded {len(cmd_log.splitlines())} recent commands\033[0m")
-        print(f"\033[0;90mLoaded {len(recording.splitlines())} lines of terminal output\033[0m")
-        print("\033[0;90m────────────────────────────────────\033[0m")
-    print()
 
     initial = " ".join(args.chat) if hasattr(args, "chat") and args.chat else ""
     if initial:
@@ -531,6 +490,11 @@ def cmd_chat(args):
         resp = parse_response(resp)
         print(f"\033[1;32mRook:\033[0m {resp}\n")
         messages.append({"role": "assistant", "content": resp})
+    else:
+        # Auto-greeting when chat opens without an initial message
+        greeting = "Hello! I'm Rook, your terminal copilot. What can I help you with?"
+        print(f"\033[1;32mRook:\033[0m {greeting}\n")
+        messages.append({"role": "assistant", "content": greeting})
 
     while True:
         try:

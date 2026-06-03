@@ -231,25 +231,25 @@ class TestBuildSystemPrompt(unittest.TestCase):
 
         prompt = build_system_prompt(SAMPLE_CONTEXT, [])
 
-        # Rook must identify itself by name multiple times
-        self.assertGreaterEqual(prompt.count("Rook"), 2)
-        # Should explicitly tell the model its identity (not generic)
-        self.assertIn("system-aware AI terminal copilot", prompt)
-        # Should mention its purpose: helping with system / terminal
+        # Rook must identify itself by name
+        self.assertIn("Rook", prompt)
+        # Should mention terminal copilot
+        self.assertIn("terminal copilot", prompt)
+        # Should mention its purpose: helping with system
         self.assertIn("terminal", prompt.lower())
-        # Should mention local/on-device
-        self.assertIn("Ollama", prompt)
         # Should still have the rules
         self.assertIn("<cmd>", prompt)
         # Should explicitly disavow being Cipher
         self.assertIn('NOT Cipher', prompt)
 
-    def test_includes_version(self):
-        import rook
+    def test_conversational_tone(self):
         from rook import build_system_prompt
 
         prompt = build_system_prompt(SAMPLE_CONTEXT, [])
-        self.assertIn(rook.__version__, prompt)
+
+        # Should use conversational instructions
+        self.assertIn("short and conversational", prompt)
+        self.assertIn("helpful friend", prompt)
 
 
 if __name__ == "__main__":
