@@ -243,18 +243,18 @@ def build_system_prompt(context, history_lines):
         ctx_str = json.dumps(compact, indent=1)
     else:
         ctx_str = "No system context available. Run: rook scan"
-    return f"""You are Rook, a terminal copilot running locally on this Linux machine.
+    return f"""You are Rook, a terminal copilot running on this Linux machine. You run commands and show results.
 
-You are a helpful friend who knows Linux. You see the user's system info, recent commands, and terminal output. You help them debug errors, find files, manage services, write scripts, and understand what's happening on their machine.
-
-How to respond:
-- Keep it short and conversational. One or two sentences unless they ask for detail.
-- When suggesting a command, wrap it in <cmd>...</cmd> so it can be executed.
-- If something is not installed, just say "install it" and give the command.
-- Never invent file paths, flags, or package names. If unsure, say so.
-- Plain text only. No markdown, no code fences, no asterisks, no headers.
-- If asked who you are, say: "I'm Rook, your terminal copilot."
-- You are NOT Cipher. You are NOT a generic AI assistant. You are Rook.
+RULES — follow these exactly:
+1. When the user asks you to do something, run a command. Wrap it in <cmd>...</cmd>.
+2. NEVER make up results. If you have not run a command, do not claim you have. Say "let me check" and run the command.
+3. Keep replies short. One or two sentences max. The command and its output speak for themselves.
+4. If a package is missing, give the install command in <cmd>...</cmd>.
+5. If you are unsure, say "I'm not sure" and try a command anyway. Do not guess.
+6. Plain text only. No markdown. No asterisks. No hashes. No code fences.
+7. You can see the user's system info and recent terminal output below. Use it.
+8. If asked who you are: "I'm Rook, your terminal copilot."
+9. You are NOT Cipher. You are NOT a generic assistant. You are Rook.
 
 System info: {ctx_str}"""
 
@@ -267,6 +267,49 @@ def parse_response(text):
     # Strip leading/trailing whitespace
     text = text.strip()
     return text
+
+
+_CMD_TAG_RE = re.compile(r"<cmd>(.*?)</cmd>", re.DOTALL)
+
+
+def _run_cmd(command):
+    """Execute a shell command and return (stdout, exit_code)."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=30,
+        )
+        return result.stdout.strip(), result.returncode
+    except subprocess.TimeoutExpired:
+        return "[command timed out after 30s]", -1
+    except Exception as e:
+        return f"[error: {e}]", -1
+
+
+def _handle_response(resp, messages, cfg):
+    """Print AI response, execute any <cmd> tags, and update conversation."""
+    # Print the conversational part (text before/after <cmd> tags)
+    text_before = _CMD_TAG_RE.split(resp)[0].strip()
+    if text_before:
+        print(f"\033[1;32mRook:\033[0m {text_before}")
+
+    # Execute each <cmd> tag
+    for match in _CMD_TAG_RE.finditer(resp):
+        command = match.group(1).strip()
+        print(f"\033[1;36m▸ {command}\033[0m")
+        output, exit_code = _run_cmd(command)
+        if output:
+            print(output)
+        # Feed the command + output back so AI can see results
+        cmd_result = f"[command] {command}\n[output] {output}\n[exit code] {exit_code}"
+        messages.append({"role": "assistant", "content": cmd_result})
+
+    # If there were no <cmd> tags and no text before, print the full response
+    if not _CMD_TAG_RE.search(resp) and not text_before:
+        print(f"\033[1;32mRook:\033[0m {resp}")
+
+    # Always add the original response as assistant message for context
+    messages.append({"role": "assistant", "content": resp})
 
 
 def call_ai(messages, cfg):
@@ -457,16 +500,12 @@ def cmd_chat(args):
     sys_prompt = build_system_prompt(context, [])
     messages = [{"role": "system", "content": sys_prompt}]
 
-    # Rotate the terminal recordings so the chat REPL doesn't see the
-    # user's previous shell session (which may include startup banners,
-    # .zshrc content, or other noise). The new chat shell is clean; we
-    # only want context from the rook session itself.
+    # Read terminal context FIRST, then rotate for the next session.
+    recording = load_recording(max_lines=100)
+    cmd_log = load_cmd_log(max_lines=30)
     _rotate_recordings()
 
     # Build terminal context
-    terminal_ctx = ""
-    recording = load_recording(max_lines=100)
-    cmd_log = load_cmd_log(max_lines=30)
     parts = []
     if cmd_log:
         parts.append(f"Recent commands (timestamp | exit_code | command):\n{cmd_log}")
@@ -488,8 +527,7 @@ def cmd_chat(args):
         messages.append({"role": "user", "content": initial})
         resp = call_ai(messages, cfg)
         resp = parse_response(resp)
-        print(f"\033[1;32mRook:\033[0m {resp}\n")
-        messages.append({"role": "assistant", "content": resp})
+        _handle_response(resp, messages, cfg)
     else:
         # Auto-greeting when chat opens without an initial message
         greeting = "Hello! I'm Rook, your terminal copilot. What can I help you with?"
@@ -510,8 +548,7 @@ def cmd_chat(args):
         messages.append({"role": "user", "content": user})
         resp = call_ai(messages, cfg)
         resp = parse_response(resp)
-        print(f"\033[1;32mRook:\033[0m {resp}\n")
-        messages.append({"role": "assistant", "content": resp})
+        _handle_response(resp, messages, cfg)
 
 
 # ---------------------------------------------------------------------------

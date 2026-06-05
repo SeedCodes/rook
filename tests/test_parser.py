@@ -247,9 +247,12 @@ class TestBuildSystemPrompt(unittest.TestCase):
 
         prompt = build_system_prompt(SAMPLE_CONTEXT, [])
 
-        # Should use conversational instructions
-        self.assertIn("short and conversational", prompt)
-        self.assertIn("helpful friend", prompt)
+        # Should instruct short replies
+        self.assertIn("Keep replies short", prompt)
+        # Should tell the AI to run commands
+        self.assertIn("run a command", prompt)
+        # Should explicitly forbid hallucination
+        self.assertIn("NEVER make up results", prompt)
 
 
 if __name__ == "__main__":

@@ -271,5 +271,82 @@ class TestLoadRecordingFiltersNoise(unittest.TestCase):
         self.assertIn("actual user output", result)
 
 
+class TestRunCmd(unittest.TestCase):
+    """Test _run_cmd() executes commands."""
+
+    def test_runs_simple_command(self):
+        from rook import _run_cmd
+
+        output, code = _run_cmd("echo hello")
+        self.assertEqual(output, "hello")
+        self.assertEqual(code, 0)
+
+    def test_captures_stderr(self):
+        from rook import _run_cmd
+
+        output, code = _run_cmd("ls /nonexistent_path_xyz 2>&1")
+        self.assertIn("No such file", output)
+        self.assertNotEqual(code, 0)
+
+    def test_timeout(self):
+        from rook import _run_cmd
+
+        output, code = _run_cmd("sleep 60")
+        self.assertIn("timed out", output)
+        self.assertEqual(code, -1)
+
+
+class TestHandleResponse(unittest.TestCase):
+    """Test _handle_response() parses <cmd> tags and executes."""
+
+    @mock.patch("builtins.print")
+    def test_prints_text_before_cmd(self, mock_print):
+        from rook import _handle_response
+
+        messages = []
+        cfg = {"model": "test", "ollama_url": "http://localhost:11434"}
+
+        resp = "Let me check.\n<cmd>echo hello</cmd>"
+        with mock.patch("rook._run_cmd", return_value=("hello", 0)):
+            _handle_response(resp, messages, cfg)
+
+        # Should have printed "Let me check."
+        printed = [str(c) for c in mock_print.call_args_list]
+        self.assertTrue(any("Let me check." in c for c in printed))
+
+    @mock.patch("builtins.print")
+    @mock.patch("rook._run_cmd", return_value=("output_line", 0))
+    def test_executes_cmd_tag(self, mock_run, mock_print):
+        from rook import _handle_response
+
+        messages = []
+        cfg = {"model": "test", "ollama_url": "http://localhost:11434"}
+
+        resp = "<cmd>echo test</cmd>"
+        _handle_response(resp, messages, cfg)
+
+        mock_run.assert_called_once_with("echo test")
+        # Output should be printed
+        printed = [str(c) for c in mock_print.call_args_list]
+        self.assertTrue(any("output_line" in c for c in printed))
+
+    @mock.patch("builtins.print")
+    @mock.patch("rook._run_cmd", return_value=("result", 0))
+    def test_adds_cmd_result_to_messages(self, mock_run, mock_print):
+        from rook import _handle_response
+
+        messages = []
+        cfg = {"model": "test", "ollama_url": "http://localhost:11434"}
+
+        resp = "Check this:\n<cmd>ls</cmd>"
+        _handle_response(resp, messages, cfg)
+
+        # Should have 2 assistant messages: cmd_result + original
+        assistant_msgs = [m for m in messages if m["role"] == "assistant"]
+        self.assertEqual(len(assistant_msgs), 2)
+        self.assertIn("[command] ls", assistant_msgs[0]["content"])
+        self.assertIn("[output] result", assistant_msgs[0]["content"])
+
+
 if __name__ == "__main__":
     unittest.main()
