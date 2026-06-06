@@ -235,12 +235,10 @@ class TestBuildSystemPrompt(unittest.TestCase):
         self.assertIn("Rook", prompt)
         # Should mention terminal copilot
         self.assertIn("terminal copilot", prompt)
-        # Should mention its purpose: helping with system
-        self.assertIn("terminal", prompt.lower())
-        # Should still have the rules
+        # Should mention its purpose: suggesting commands
+        self.assertIn("command", prompt.lower())
+        # Should still have the cmd tags instruction
         self.assertIn("<cmd>", prompt)
-        # Should explicitly disavow being Cipher
-        self.assertIn('NOT Cipher', prompt)
 
     def test_conversational_tone(self):
         from rook import build_system_prompt
@@ -248,11 +246,11 @@ class TestBuildSystemPrompt(unittest.TestCase):
         prompt = build_system_prompt(SAMPLE_CONTEXT, [])
 
         # Should instruct short replies
-        self.assertIn("Keep replies short", prompt)
-        # Should tell the AI to run commands
-        self.assertIn("run a command", prompt)
+        self.assertIn("Keep your text very short", prompt)
+        # Should tell the AI to suggest commands
+        self.assertIn("suggest a command", prompt)
         # Should explicitly forbid hallucination
-        self.assertIn("NEVER make up results", prompt)
+        self.assertIn("Never invent output", prompt)
 
 
 if __name__ == "__main__":

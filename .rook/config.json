@@ -1,5 +1,5 @@
 {
-  "model": "llama3.2:3b",
+  "model": "deepseek-coder:latest",
   "ollama_url": "http://localhost:11434",
   "web_search": true,
   "theme": "dark",
